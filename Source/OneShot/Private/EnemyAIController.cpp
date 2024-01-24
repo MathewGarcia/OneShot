@@ -3,6 +3,7 @@
 
 #include "EnemyAIController.h"
 #include "Enemy.h"
+#include "NiagaraComponent.h"
 
 void AEnemyAIController::BeginPlay()
 {
@@ -11,9 +12,15 @@ void AEnemyAIController::BeginPlay()
 	Enemy = Cast<AEnemy>(GetPawn());
 }
 
+void AEnemyAIController::SetEnemy(AEnemy* newEnemy)
+{
+	Enemy = newEnemy;
+}
+
 void AEnemyAIController::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
 
 	if (Enemy) {
 		switch (Enemy->GetAIState()) {
@@ -24,6 +31,12 @@ void AEnemyAIController::Tick(float DeltaTime)
 		case EAIStates::ATTACKING:
 			Enemy->AttackPlayer();
 			break;
+		default: 
+			break;
 		}
+	}
+	else {
+		UE_LOG(LogTemp, Warning, TEXT("Enemy failed in Enemy AI tick"));
+
 	}
 }

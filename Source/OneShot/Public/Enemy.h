@@ -15,6 +15,8 @@ enum class EAIStates : uint8 {
 	COVER UMETA(DisplayName = "Cover")
 };
 
+class AOneShotGameModeBase;
+class UNiagaraComponent;
 UCLASS(Abstract)
 class ONESHOT_API AEnemy : public ACharacter, public IHitByProjectileInterface
 {
@@ -42,22 +44,53 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
 	float AttackSpeed;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
+	float MaxDistanceAllowed;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWRite, Category = "AI")
+	float SpawnedHealth;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWRite, Category = "AI")
+	UNiagaraComponent*ParticleSystem;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "EnemySounds")
+	TArray<USoundBase*>AttackSounds;
+
 	void MoveTowardsPlayer(float DeltaTime);
 
 	//this is the same as making a function pure_virtual in C++ virtual void AttackPlayer() = 0;
 	virtual void AttackPlayer() PURE_VIRTUAL(AEnemy::AttackPlayer, );
 
+	virtual void Initialize() PURE_VIRTUAL(AEnemy::Initialize, );
+
 	virtual bool CanAttack() PURE_VIRTUAL(AEnemy::CanAttack, return false;);
 
 	FTimerHandle AttackSpeedTimerHandle;
 
+	UFUNCTION(BlueprintCallable,Category = "AIState")
 	EAIStates GetAIState();
+
+	void SetAIState(EAIStates newState);
+
+	void SetActivate(bool isActive);
+
+	bool IsActive() const {
+		return bisActive;
+	}
+
+	void SpawnEnemy();
 
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 	EAIStates EnemyState;
 	class APlayerCharacter* player;
+
+	bool bisActive;
+
+	AOneShotGameModeBase* GM;
+
+	float LastTimeTalked = 0.f;
 
 public:	
 	// Called every frame
@@ -67,5 +100,9 @@ public:
 
 	virtual void HitByProjectile(float DamageAmount,AActor* Shooter, FDamageEvent& DamageEvent) override;
 
+	bool MaxDistanceToPlayer();
+
+private:
+	FTimerHandle FRespawnTimerHandle;
 
 };

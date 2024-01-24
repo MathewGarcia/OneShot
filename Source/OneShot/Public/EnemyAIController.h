@@ -19,6 +19,8 @@ class ONESHOT_API AEnemyAIController : public AAIController
 public:
 	virtual void BeginPlay() override;
 
+	void SetEnemy(AEnemy* newEnemy);
+
 protected:
 	virtual void Tick(float DeltaTime) override;
 

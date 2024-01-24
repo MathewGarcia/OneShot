@@ -13,6 +13,10 @@ UCLASS()
 class ONESHOT_API ATankEnemy : public AEnemy
 {
 	GENERATED_BODY()
+
+
+	UPROPERTY(EditAnywhere, Category = "Sound")
+	USoundBase*FireSound;
 	
 protected:
 	virtual void AttackPlayer() override;
@@ -20,5 +24,7 @@ protected:
 	virtual bool CanAttack() override;
 
 	virtual void Tick(float DeltaTime) override;
+
+	virtual void Initialize() override;
 
 };

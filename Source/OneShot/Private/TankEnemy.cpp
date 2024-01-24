@@ -5,11 +5,19 @@
 #include "PlayerCharacter.h"
 #include "Engine/DamageEvents.h"
 #include "Engine/EngineTypes.h"
+#include "NiagaraComponent.h"
 #include "Components/CapsuleComponent.h"
-
+#include "Kismet/GameplayStatics.h"
 
 void ATankEnemy::AttackPlayer()
 {
+
+	int RandomNum = FMath::RandRange(0, 2);
+	if (AttackSounds[RandomNum]) {
+		UGameplayStatics::PlaySoundAtLocation(GetWorld(), AttackSounds[RandomNum], GetActorLocation());
+		UGameplayStatics::PlaySoundAtLocation(GetWorld(), FireSound, GetActorLocation());
+
+	}
 	//shoot fire
 	FVector Start = GetActorLocation();
 	FVector End = Start + GetActorForwardVector() * 500.f;
@@ -34,6 +42,8 @@ void ATankEnemy::AttackPlayer()
 			}
 		}
 	}
+
+		ParticleSystem->ActivateSystem();
 	GetWorld()->GetTimerManager().SetTimer(AttackSpeedTimerHandle, AttackSpeed, false);
 
 }
@@ -54,4 +64,18 @@ void ATankEnemy::Tick(float DeltaTime)
 	else if (!CanAttack() && EnemyState != EAIStates::SEARCHING) {
 		EnemyState = EAIStates::SEARCHING;
 	}
+	float CurrentTime = GetWorld()->GetTimeSeconds();
+	if (CurrentTime - LastTimeTalked >= 10.f) {
+		int RandomNum = FMath::RandRange(0, 2);
+		if (AttackSounds[RandomNum]) {
+			UGameplayStatics::PlaySoundAtLocation(GetWorld(), AttackSounds[RandomNum], GetActorLocation());
+		}
+		LastTimeTalked = GetWorld()->GetTimeSeconds();
+
+	}
+}
+
+void ATankEnemy::Initialize()
+{
+	Health = SpawnedHealth;
 }

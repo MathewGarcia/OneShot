@@ -1,9 +1,11 @@
 #include "Weapon.h"
+#include "PlayerCharacter.h"
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "Weapon.h"
-
+#include "NiagaraComponent.h"
+#include "NiagaraFunctionLibrary.h"
 // Sets default values
 AWeapon::AWeapon()
 {
@@ -11,7 +13,11 @@ AWeapon::AWeapon()
 	PrimaryActorTick.bCanEverTick = true;
 	WeaponMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("WeaponMesh"));
 	WeaponMesh->SetupAttachment(RootComponent);
+	WeaponMesh->SetGenerateOverlapEvents(true);
 	RootComponent = WeaponMesh;
+
+	WeaponDrop = CreateDefaultSubobject<UNiagaraComponent>(TEXT("WeaponDropParticle"));
+	WeaponDrop->SetupAttachment(WeaponMesh);
 }
 
 
@@ -20,11 +26,25 @@ EWeaponType AWeapon::GetWeaponType() const
 	return WeaponType;
 }
 
+void AWeapon::Initialize()
+{
+	CurrentAmmo = MaxAmmo;
+	SetActorScale3D(FVector(1.f, 1.f, 1.f));
+	WeaponMesh->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	WeaponMesh->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
+	WeaponDrop->ActivateSystem();
+}
+
+void AWeapon::SetActivate(bool bActive)
+{
+	bisActive = bActive;
+}
+
 // Called when the game starts or when spawned
 void AWeapon::BeginPlay()
 {
 	Super::BeginPlay();
-	
+	Initialize();
 }
 
 // Called every frame

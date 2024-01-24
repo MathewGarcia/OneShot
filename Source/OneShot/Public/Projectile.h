@@ -21,12 +21,19 @@ public:
 
 	UPROPERTY(EditAnywhere, Category = "Effects")
 	class UParticleSystem* ExplosionEffect;
+
+		UPROPERTY(EditAnywhere, Category = "Effects")
+		class USoundBase*ExplosionSound;
 	
 	class USphereComponent* GetCollisionComponent() const { return CollisionComponent; }
 
 	void FireInDirection(const FVector& Direction);
 
 	float CalcDamageFromDistance(AActor* Victim,float Distance);
+
+	void ShotByPlayer();
+
+	float PlayerWeaponDamage = 0;
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;

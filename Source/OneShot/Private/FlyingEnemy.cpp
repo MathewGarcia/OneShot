@@ -4,6 +4,8 @@
 #include "FlyingEnemy.h"
 #include "PlayerCharacter.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "NiagaraComponent.h"
+#include "Kismet/GameplayStatics.h"
 
 
 AFlyingEnemy::AFlyingEnemy()
@@ -14,6 +16,10 @@ AFlyingEnemy::AFlyingEnemy()
 
 void AFlyingEnemy::AttackPlayer()
 {
+	int RandomNum = FMath::RandRange(0, 2);
+	if (AttackSounds[RandomNum]) {
+		UGameplayStatics::PlaySoundAtLocation(GetWorld(), AttackSounds[RandomNum], GetActorLocation());
+	}
 	//spawn a projectile that will hit the player eventually, maybe follow the player for x seconds and then go nullptr
 	FVector SpawnLocation = GetActorLocation() + GetActorForwardVector();
 	FVector Direction = (player->GetActorLocation() - SpawnLocation).GetSafeNormal();
@@ -22,6 +28,7 @@ void AFlyingEnemy::AttackPlayer()
 	AProjectile* SpawnedProjectile = GetWorld()->SpawnActor<AProjectile>(ProjectileToSpawn, SpawnLocation, Direction.Rotation(), SpawnParams);
 	SpawnedProjectile->FireInDirection(Direction*FiringDistance);
 	MoveIgnoreActorAdd(SpawnedProjectile);
+	ParticleSystem->ActivateSystem();
 	GetWorld()->GetTimerManager().SetTimer(AttackSpeedTimerHandle, AttackSpeed, false);
 }
 
@@ -38,7 +45,7 @@ void AFlyingEnemy::Tick(float DeltaTime)
 	if (CanAttack()) {
 		EnemyState = EAIStates::ATTACKING;
 	}
-	else if (!CanAttack() && EnemyState != EAIStates::SEARCHING) {
+	else if (!CanAttack()  && EnemyState != EAIStates::SEARCHING) {
 		EnemyState = EAIStates::SEARCHING;
 	}
 
@@ -50,12 +57,19 @@ void AFlyingEnemy::Tick(float DeltaTime)
 		FVector Direction = FVector(0.f, 0.f, 1);
 		AddMovementInput(Direction, 1.0f);
 	}
-	else if (CurrentHeight > MaxGroundDistance) {
+	else if (CurrentHeight >= MaxGroundDistance) {
 		FVector Direction = FVector(0.f, 0.f, -1);
 		AddMovementInput(Direction, 1.0f);
 	}
-
 }
+
+void AFlyingEnemy::Initialize()
+{
+	GetCharacterMovement()->SetMovementMode(MOVE_Flying);
+	Health = SpawnedHealth;
+}
+
+
 
 float AFlyingEnemy::CheckDistanceToGround()
 {
@@ -75,3 +89,4 @@ float AFlyingEnemy::CheckDistanceToGround()
 	//if we dont hit we are clearly at max distance our higher
 	return MaxGroundDistance;
 }
+

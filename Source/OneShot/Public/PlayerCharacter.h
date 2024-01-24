@@ -6,6 +6,7 @@
 #include "GameFramework/Character.h"
 #include "../../../../../../../../Program Files/Epic Games/UE_5.3/Engine/Plugins/EnhancedInput/Source/EnhancedInput/Public/EnhancedInputLibrary.h"
 #include "HitByProjectileInterface.h"
+#include "TutorialGameModeBase.h"
 #include "PlayerCharacter.generated.h"
 
 UENUM(BlueprintType)
@@ -18,6 +19,11 @@ enum class EPlayerStates : uint8 {
 };
 
 class AWeapon;
+class AOneShotGameModeBase;
+class APlayerCharacterController;
+class ATutorialGameModeBase;
+class ASpawnButtonActor;
+class UNiagaraSystem;
 
 UCLASS()
 class ONESHOT_API APlayerCharacter : public ACharacter, public IHitByProjectileInterface
@@ -42,6 +48,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Head camera")
 	class UCameraComponent* HeadCamera;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mouse Sensitivity")
+	USkeletalMeshComponent*FPSMesh;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Slide")
 	float MaxSlideTime;
 
@@ -53,6 +62,15 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player Info")
 	float Health;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mouse Sensitivity")
+	float MouseSens = 0.3;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mouse Sensitivity")
+	USoundBase*PickupSound;
+	
+	UPROPERTY(EditAnywhere, Category = "Blood Splatter")
+	 UNiagaraSystem* BloodSplatter;
 
 	FVector slideVel;
 
@@ -79,9 +97,32 @@ public:
 	UFUNCTION(Blueprintcallable, Category = "Weapon")
 	AWeapon* GetCurrentWeapon();
 
+	UFUNCTION(Blueprintcallable, Category = "Weapon")
+	AWeapon* GetDefaultWeapon();
+
 	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, class AActor* DamageCauser) override;
 
+	FTimerHandle FFireRateTimerHandle;
+
+	bool CanFire();
+
 	void EquipWeapon(AWeapon*NewWeapon);
+
+	UFUNCTION(BlueprintCallable, Category = "PlayerMovement")
+	EPlayerStates GetCurrentMovementState();
+
+
+	void OpenMenu(const FInputActionValue& Value);
+
+	void SetSensitivity(float newSensitivity);
+
+	void PlayerJump();
+
+	bool bCanInteract = false;
+
+	void Interact();
+
+	ASpawnButtonActor* SpawnButtonActor;
 
 protected:
 	// Called when the game starts or when spawned
@@ -91,7 +132,6 @@ protected:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 	virtual void NotifyActorBeginOverlap(AActor* OtherActor) override;
-
 
 public:
 	// Called every frame
@@ -109,5 +149,21 @@ private:
 
 	AWeapon* CurrentWeapon;
 
+	AWeapon* DefaultWeapon;
+
 	float MaxHealth = 100.f;
+	AOneShotGameModeBase* GM;
+
+	APlayerCharacterController* APCC;
+
+	UFPSArmsAnimInstance* AnimInstance;
+
+	ATutorialGameModeBase* TGM;
+
+	FTutorialEventDelegate* TutorialDelegate = nullptr;
+
+	bool bCanFire = true;
+
+	FVector OriginalArmLocation;
+
 };

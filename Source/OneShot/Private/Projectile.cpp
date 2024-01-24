@@ -47,7 +47,7 @@ float AProjectile::CalcDamageFromDistance(AActor* Victim, float Distance)
 {
 	float DPSFalloff = 1.5f;
 	float OuterRadius = 100.f;
-	float DamageAmount;
+	float DamageAmount = 0;
 	//player is the victim
 	if (APlayerCharacter* PlayerVictim = Cast<APlayerCharacter>(Victim)) {
 		//so the enemy is the shooter
@@ -67,13 +67,48 @@ float AProjectile::CalcDamageFromDistance(AActor* Victim, float Distance)
 		//so the shooter is the player
 		APlayerCharacter* PlayerShooter = Cast<APlayerCharacter>(GetOwner());
 		if (PlayerShooter) {
-			float MaxDamage = PlayerShooter->GetCurrentWeapon()->DamageAmount;
-			float MinDamage = PlayerShooter->GetCurrentWeapon()->DamageAmount/2;
-			float DamageBasedOffHitpoint = FMath::Clamp((OuterRadius - Distance) / OuterRadius, 0.0f, 1.f);
+			float MaxDamage = PlayerWeaponDamage;
+			float MinDamage = PlayerWeaponDamage/2;
+			float DamageBasedOffHitpoint = FMath::Clamp((OuterRadius - Distance) / OuterRadius, 0.0f, 1.);
 			DamageAmount = FMath::Lerp(MinDamage, MaxDamage, DamageBasedOffHitpoint * DPSFalloff);
 		}
 	}
 	return DamageAmount;
+}
+
+void AProjectile::ShotByPlayer()
+{
+	UE_LOG(LogTemp, Warning, TEXT("SHOT BY PLAYER"));
+	//basically copy and paste from our explosion radius but do the same thing when we shoot it out of the sky. However we need to give the player another shot of ammo.
+	FRadialDamageEvent RadialDamageEvent;
+
+	//if the projectile missed, then do radius damage.
+	TArray<AActor*> HitActors;
+	//spawning a sphere getting actors in the sphere
+	UKismetSystemLibrary::SphereOverlapActors(this, GetActorLocation(), 500.f, TArray<TEnumAsByte<EObjectTypeQuery>>(), AActor::StaticClass(), TArray<AActor*>(), HitActors);
+
+	DrawDebugSphere(GetWorld(), GetActorLocation(), 500.f, 32, FColor::Red, false, 2.0f);
+
+	for (AActor* Actor : HitActors) {
+		//if the actor is not null and is implementing our interface 
+		if (Actor && Actor->Implements<UHitByProjectileInterface>()) {
+			//calculate the magnitude of our location - the hit point.
+			float Distance = (Actor->GetActorLocation() - GetActorLocation()).Size();
+			//call our calc damage from distance
+			float DamageAmount = CalcDamageFromDistance(Actor, Distance);
+			//apply the damage.
+			if (APlayerCharacter* playerHit = Cast<APlayerCharacter>(Actor)) {
+				playerHit->HitByProjectile(DamageAmount, GetOwner(), RadialDamageEvent);
+			}
+			else if (AEnemy* EnemyHit = Cast<AEnemy>(Actor)) {
+				EnemyHit->HitByProjectile(DamageAmount, GetOwner(), RadialDamageEvent);
+			}
+		}
+	}
+
+	UGameplayStatics::SpawnEmitterAtLocation(this, ExplosionEffect, GetActorLocation(), FRotator::ZeroRotator, true, EPSCPoolMethod::AutoRelease);
+
+	Destroy();
 }
 
 
@@ -102,15 +137,19 @@ void AProjectile::NotifyHit(UPrimitiveComponent* MyComp, AActor* Other, UPrimiti
 {
 	Super::NotifyHit(MyComp, Other, OtherComp, bSelfMoved, HitLocation, HitNormal, NormalImpulse, Hit);
 
+	if (ExplosionSound) {
+		UGameplayStatics::PlaySoundAtLocation(GetWorld(), ExplosionSound, GetActorLocation());
+	}
 	FRadialDamageEvent RadialDamageEvent;
+
 
 	//this is a direct hit, if the other actor implements our interface, then give it full damage
 	if (Other && Other->Implements<UHitByProjectileInterface>()) {
 		IHitByProjectileInterface* HitActor = Cast<IHitByProjectileInterface>(Other);
-		float Damage;
+		float Damage = 0;
 		if (HitActor) {
 			if (APlayerCharacter* player = Cast<APlayerCharacter>(GetOwner())) {
-				 Damage = player->GetCurrentWeapon()->DamageAmount;
+				Damage = PlayerWeaponDamage;
 			}
 			else if (AEnemy* Enemy = Cast<AEnemy>(GetOwner())) {
 				 Damage = Enemy->Damage;

@@ -33,6 +33,9 @@ protected:
 
 	virtual void Tick(float DeltaTime) override;
 
+	virtual void Initialize() override;
+
 	float CheckDistanceToGround();
+
 
 };
