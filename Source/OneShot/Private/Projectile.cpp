@@ -155,11 +155,6 @@ void AProjectile::NotifyHit(UPrimitiveComponent* MyComp, AActor* Other, UPrimiti
 				 Damage = Enemy->Damage;
 			}
 			HitActor->HitByProjectile(Damage, GetOwner(), RadialDamageEvent);
-
-			UGameplayStatics::SpawnEmitterAtLocation(this, ExplosionEffect, GetActorLocation(), FRotator::ZeroRotator, true, EPSCPoolMethod::AutoRelease);
-
-			Destroy();
-			return;
 		}
 	}
 
@@ -173,6 +168,10 @@ void AProjectile::NotifyHit(UPrimitiveComponent* MyComp, AActor* Other, UPrimiti
 	for (AActor* Actor : HitActors) {
 		//if the actor is not null and is implementing our interface 
 		if (Actor && Actor->Implements<UHitByProjectileInterface>()) {
+			//if the actor that was hit is equal to the one in the radius, ignore it. dont deal more damage.
+			if (Actor == Other) {
+				continue;
+			}
 			//calculate the magnitude of our location - the hit point.
 			float Distance = (Actor->GetActorLocation() - Hit.ImpactPoint).Size();
 			//call our calc damage from distance

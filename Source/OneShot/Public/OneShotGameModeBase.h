@@ -74,6 +74,8 @@ public:
 
 	void ActivateAICharacter(AEnemy* AIEnemy);
 
+	void EndGame();
+
 	float CurrentTime;
 
 	TObjectPool<AWeapon>*WeaponPool;

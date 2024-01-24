@@ -4,12 +4,15 @@
 #include "EnemyAIController.h"
 #include "Enemy.h"
 #include "NiagaraComponent.h"
+#include "NavigationSystem.h"
+#include "PlayerCharacter.h"
 
 void AEnemyAIController::BeginPlay()
 {
 	Super::BeginPlay();
 
 	Enemy = Cast<AEnemy>(GetPawn());
+	player = Cast<APlayerCharacter>(GetWorld()->GetFirstPlayerController()->GetPawn());
 }
 
 void AEnemyAIController::SetEnemy(AEnemy* newEnemy)

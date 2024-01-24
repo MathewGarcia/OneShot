@@ -102,7 +102,9 @@ public:
 
 	bool MaxDistanceToPlayer();
 
+	FVector WallCheck();
 private:
 	FTimerHandle FRespawnTimerHandle;
 
+	float LastChecked = 0;
 };

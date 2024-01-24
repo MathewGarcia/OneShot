@@ -16,7 +16,9 @@
 void AOneShotGameModeBase::SetWeapon()
 {
 	UE_LOG(LogTemp, Warning, TEXT("Set Weapon"));
+
 	int RandomNum = FMath::RandRange(0, WeaponsToSpawn.Num() - 1);
+	if (!WeaponsToSpawn.IsValidIndex(RandomNum)) { return; }
 
 	AWeapon* Weapon = WeaponPool->GetPooledObject(WeaponsToSpawn[RandomNum]);
 	if (Weapon) {
@@ -63,6 +65,7 @@ void AOneShotGameModeBase::SetWeapon()
 void AOneShotGameModeBase::SetEnemy()
 {
 	int RandomNum = FMath::RandRange(0, EnemiesToSpawn.Num() - 1);
+	if (!EnemiesToSpawn.IsValidIndex(RandomNum)) { return; }
 
 	AEnemy*Enemy = EnemyPool->GetPooledObject(EnemiesToSpawn[RandomNum]);
 	if (Enemy) {
@@ -135,6 +138,19 @@ void AOneShotGameModeBase::ActivateAICharacter(AEnemy* AIEnemy)
 		}
 		
 	}
+}
+
+void AOneShotGameModeBase::EndGame()
+{
+	EnemyPool->ClearPool();
+	WeaponPool->ClearPool();
+	GetWorld()->GetTimerManager().ClearAllTimersForObject(this);
+	GetWorld()->GetTimerManager().ClearAllTimersForObject(player);
+
+	FTimerHandle TimerHandle;
+	GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this]() {
+		UGameplayStatics::OpenLevel(GetWorld(), "MainMenu");
+		}, 3.0f, false);
 }
 
 void AOneShotGameModeBase::BeginPlay()

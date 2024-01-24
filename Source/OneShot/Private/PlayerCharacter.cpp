@@ -84,7 +84,7 @@ void APlayerCharacter::SetSlide()
 
 	//get the velocity we are currently at
 	slideVel = GetVelocity();
-
+	PreviousState = playerMovementStates;
 		//set our player to sliding state
 		playerMovementStates = EPlayerStates::Slide;
 		//start the timer
@@ -142,16 +142,19 @@ void APlayerCharacter::EndSlide()
 void APlayerCharacter::Sprint()
 {
 	//just movement states
-	if (GetCharacterMovement()) {
+	if (GetCharacterMovement() && playerMovementStates != EPlayerStates::Slide) {
 		switch (playerMovementStates) {
 		case EPlayerStates::NONE:
 		case EPlayerStates::Crouch:
-			playerMovementStates = EPlayerStates::Sprint;
-			GetCharacterMovement()->MaxWalkSpeed = 1200;
+			if (GetCharacterMovement()->IsCrouching()) {
+				UnCrouch();
+			}
+				playerMovementStates = EPlayerStates::Sprint;
+				GetCharacterMovement()->MaxWalkSpeed = 1200;
 			break;
 		case EPlayerStates::Sprint:
-			playerMovementStates = EPlayerStates::NONE;
-			GetCharacterMovement()->MaxWalkSpeed = 600;
+				playerMovementStates = EPlayerStates::NONE;
+				GetCharacterMovement()->MaxWalkSpeed = 600;
 			break;
 		}
 		if (TutorialDelegate) {
@@ -187,7 +190,9 @@ void APlayerCharacter::Fire()
 		else {
 			UE_LOG(LogTemp, Warning, TEXT("AnimInstance failed"));
 		}
-		playerMovementStates = EPlayerStates::NONE;
+		if (playerMovementStates == EPlayerStates::Sprint) {
+			playerMovementStates = EPlayerStates::NONE;
+		}
 
 		if (TutorialDelegate) {
 			if (TGM && TGM->GetTutorialState() == ETutorialState::FIRE) {
@@ -353,7 +358,6 @@ void APlayerCharacter::BeginPlay()
 	APCC = Cast<APlayerCharacterController>(GetController());
 	AnimInstance = Cast<UFPSArmsAnimInstance>(FPSMesh->GetAnimInstance());
 	SetHealth(MaxHealth);
-	OriginalArmLocation = FPSMesh->GetComponentLocation();
 }
 
 // Called every frame
@@ -427,6 +431,25 @@ void APlayerCharacter::NotifyActorBeginOverlap(AActor* OtherActor)
 }
 
 
+void APlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	Super::EndPlay(EndPlayReason);
+
+		for (FTimerHandle& TimerHandle : WeaponRespawnTimerHandles) {
+
+			UE_LOG(LogTemp, Warning, TEXT("Clearing weapon respawn timers"));
+			GetWorld()->GetTimerManager().ClearTimer(TimerHandle);
+
+		}
+		WeaponRespawnTimerHandles.Empty();
+
+		if (GM) {
+			GM->EndGame();
+		}
+	
+	GetWorld()->GetTimerManager().ClearAllTimersForObject(this);
+}
+
 AWeapon* APlayerCharacter::GetCurrentWeapon()
 {
 	return CurrentWeapon;
@@ -439,6 +462,8 @@ AWeapon* APlayerCharacter::GetDefaultWeapon()
 
 float APlayerCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
+	//if we are in the tutorial area, dont take damage.
+	if (!GM) { return 0; }
 	//set the health
 	SetHealth(Health - DamageAmount);
 
@@ -455,7 +480,7 @@ float APlayerCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Damag
 		float DeathTime = GetWorld()->GetTimeSeconds();
 		int Min = FMath::FloorToInt(DeathTime / 60.f);
 		int Sec = FMath::RoundToInt(DeathTime) % 60;
-		Destroy();
+
 		if (APCC) {
 			APCC->SetDeathWidgetVisibility(ESlateVisibility::Visible);
 			if (GM) {
@@ -465,10 +490,8 @@ float APlayerCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Damag
 				APCC->SetDeathText(text);
 			}
 		}
-		FTimerHandle TimerHandle;
-		GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this]() {
-			UGameplayStatics::OpenLevel(GetWorld(), "MainMenu");
-			}, 3.0f, false);
+
+		Die();
 	}
 
 	return DamageAmount;
@@ -519,12 +542,16 @@ void APlayerCharacter::EquipWeapon(AWeapon* NewWeapon)
 	//set the current weapon count to subtract because we can only shoot a picked up weapon once. Once we do, we tell the game mode to spawn a new weapon in 15 seconds after picking up the weapon.
 	if (GM) {
 		GM->SetCurrentWeaponAmount(GM->GetCurrentWeaponAmount() - 1);
-		if (GM->GetCurrentWeaponAmount() != GM->MaxWeaponsAllowed) {
+		if (GM->GetCurrentWeaponAmount() < GM->MaxWeaponsAllowed) {
 			FTimerHandle TimerHandle;
 			GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this]() {
 				GM->SetWeapon();
 				},15.f, false);
+
+			WeaponRespawnTimerHandles.Add(TimerHandle);
+
 		}
+
 	}
 	else if (TGM) {
 		for (int i = 0; i < TGM->WeaponSpawnAreas.Num(); i++){
@@ -535,7 +562,10 @@ void APlayerCharacter::EquipWeapon(AWeapon* NewWeapon)
 				GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this,i]() {
 					TGM->SpawnWeapon(TGM->WeaponSpawnAreas[i]);
 					}, 1.0f, false);
+				WeaponRespawnTimerHandles.Add(TimerHandle);
+
 			}
+
 		}
 	}
 }
@@ -592,6 +622,19 @@ void APlayerCharacter::Interact()
 	if (bCanInteract && SpawnButtonActor) {
 		SpawnButtonActor->SpawnEnemy();
 	}
+}
+
+void APlayerCharacter::Die()
+{
+	//death
+	GetCharacterMovement()->DisableMovement();
+	FRotator DeathRotation = FRotator(0, 0, 0);
+	FRotator CurrentRotation = GetActorRotation();
+	float LerpSpeed = 0.5f;
+	FRotator NewRotation = FMath::Lerp(CurrentRotation, DeathRotation, LerpSpeed);
+	SetActorRotation(NewRotation);
+
+	EndPlay(EEndPlayReason::LevelTransition);
 }
 
 void APlayerCharacter::Move(const FInputActionValue& Value)

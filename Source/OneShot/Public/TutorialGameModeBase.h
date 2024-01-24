@@ -55,6 +55,9 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Amount To Spawn")
 	int AmountToSpawn;
 
+	UFUNCTION(BlueprintCallable, Category = "EndGame")
+	void EndGame();
+
 	ETutorialState GetCurrentTutorialState();
 
 	TObjectPool<AWeapon>* WeaponPool;
@@ -71,6 +74,8 @@ public:
 private:
 
 	APlayerCharacterController* APCC;
+
+	APlayerCharacter* player;
 
 	ETutorialState TutorialState;
 

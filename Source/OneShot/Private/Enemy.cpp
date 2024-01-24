@@ -11,6 +11,7 @@
 #include "CrawlerEnemy.h"
 #include "NiagaraFunctionLibrary.h"
 #include "DOTVolume.h"
+#include "FlyingEnemy.h"
 // Sets default values
 AEnemy::AEnemy()
 {
@@ -32,8 +33,16 @@ void AEnemy::MoveTowardsPlayer(float DeltaTime)
 	if (player) {
 		//get the players location
 		FVector PlayerLocation = player->GetActorLocation();
-		//get the direction by subtracting the 2 points in space and normalizing
-		FVector Direction = (PlayerLocation - GetActorLocation()).GetSafeNormal();
+		float CurrentTime = GetWorld()->GetTimeSeconds();
+		FVector Direction;
+
+		if (CurrentTime - LastChecked > 1.0f) {
+			Direction = WallCheck();
+		}
+		else {
+			//get the direction by subtracting the 2 points in space and normalizing
+			Direction = (PlayerLocation - GetActorLocation()).GetSafeNormal();
+		}
 		//now that we have our direction make a rotation out of it
 		FRotator RotationDirection = FRotationMatrix::MakeFromX(Direction).Rotator();
 		//interpolation to rotate our enemy over time
@@ -42,8 +51,14 @@ void AEnemy::MoveTowardsPlayer(float DeltaTime)
 			//move our enemy
 			AddMovementInput(Direction, 1.0f);
 		}
-		//set the rotation
-		SetActorRotation(EnemyRotation);
+		if (this->IsA(AFlyingEnemy::StaticClass())) {
+			//set the rotation
+			SetActorRotation(EnemyRotation);
+		}
+		else {
+			SetActorRotation(FRotator(0.0f,EnemyRotation.Yaw,EnemyRotation.Roll));
+
+		}
 	}
 
 
@@ -142,6 +157,25 @@ void AEnemy::SetAIState(EAIStates newState)
 bool AEnemy::MaxDistanceToPlayer()
 {
 	return FVector::Dist(player->GetActorLocation(), GetActorLocation()) <= MaxDistanceAllowed;
+}
+
+FVector AEnemy::WallCheck()
+{
+	FVector PlayerLocation = player->GetActorLocation();
+	FVector Start = GetActorLocation();
+	FVector End = Start+GetActorForwardVector() * 80;
+	FHitResult Hit;
+	FCollisionQueryParams Params;
+	Params.AddIgnoredActor(this);
+	if (GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_Visibility, Params)) {
+		if (Hit.bBlockingHit) {
+			if (APlayerCharacter* PlayerInFront = Cast<APlayerCharacter>(Hit.GetActor())) {
+				return (PlayerLocation - GetActorLocation()).GetSafeNormal();
+			}
+			return GetActorForwardVector().MirrorByVector(Hit.ImpactNormal);
+		}
+	}
+	return (PlayerLocation - GetActorLocation()).GetSafeNormal();
 }
 
 void AEnemy::SpawnEnemy()

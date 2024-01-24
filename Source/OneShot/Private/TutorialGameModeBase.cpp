@@ -48,6 +48,15 @@ void ATutorialGameModeBase::SetTutorialState(ETutorialState newTutorialState)
 		}
 }
 
+void ATutorialGameModeBase::EndGame()
+{
+	EnemyPool->ClearPool();
+	WeaponPool->ClearPool();
+	GetWorld()->GetTimerManager().ClearAllTimersForObject(this);
+	OnTutorialEvent.RemoveAll(this);
+	OnTutorialEvent.RemoveAll(player);
+}
+
 ETutorialState ATutorialGameModeBase::GetCurrentTutorialState()
 {
 	return TutorialState;
@@ -85,6 +94,7 @@ void ATutorialGameModeBase::BeginPlay()
 	Super::BeginPlay();
 
 	APCC = Cast<APlayerCharacterController>(GetWorld()->GetFirstPlayerController());
+	player = Cast<APlayerCharacter>(APCC->GetPawn());
 	OnTutorialEvent.AddDynamic(this, &ATutorialGameModeBase::SetTutorialState);
 	SetTutorialState(ETutorialState::MOVEMENT);
 	EnemyPool = new TObjectPool<AEnemy>;
@@ -104,6 +114,7 @@ void ATutorialGameModeBase::BeginPlay()
 
 void ATutorialGameModeBase::Tick(float DeltaTime)
 {
+	
 
 }
 

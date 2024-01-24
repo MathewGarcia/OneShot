@@ -124,6 +124,8 @@ public:
 
 	ASpawnButtonActor* SpawnButtonActor;
 
+	void Die();
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -132,6 +134,8 @@ protected:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 	virtual void NotifyActorBeginOverlap(AActor* OtherActor) override;
+
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 public:
 	// Called every frame
@@ -164,6 +168,7 @@ private:
 
 	bool bCanFire = true;
 
-	FVector OriginalArmLocation;
+	EPlayerStates PreviousState = EPlayerStates::NONE;
 
+	TArray<FTimerHandle> WeaponRespawnTimerHandles;
 };

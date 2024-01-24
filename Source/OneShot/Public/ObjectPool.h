@@ -47,7 +47,7 @@ public:
 
 	void ReturnPooledObject(T* Object) {
 		if (!Object) return;
-		Object->SetActorLocation(FVector::ZeroVector);
+		Object->SetActorLocation(FVector(0, 0, -1000));
 		Object->SetActorRotation(FRotator::ZeroRotator);
 		Object->SetActorEnableCollision(false);
 		Object->SetActorHiddenInGame(true);
@@ -58,8 +58,13 @@ public:
 		//for every pooled object in the pool
 		for (T* PooledObject : Pool) {
 			if (PooledObject) {
-				//allow it to be garbage collected
-				//PooledObject->RemoveFromRoot();
+				if (WorldContext) {
+					UE_LOG(LogTemp, Warning, TEXT("Destroyed All Timers"));
+					WorldContext->GetTimerManager().ClearAllTimersForObject(PooledObject);
+				}
+				if (PooledObject->IsValidLowLevel()) {
+					PooledObject->Destroy();
+				}
 			}
 		}
 		//empty the pool

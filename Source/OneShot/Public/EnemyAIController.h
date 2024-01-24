@@ -10,6 +10,7 @@
  * 
  */
 class AEnemy;
+class APlayerCharacter;
 UCLASS()
 class ONESHOT_API AEnemyAIController : public AAIController
 {
@@ -27,4 +28,5 @@ protected:
 private:
 	AEnemy* Enemy;
 	
+	APlayerCharacter* player;
 };
